@@ -5,6 +5,7 @@ import joblib
 import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
+from sklearn.metrics.pairwise import cosine_similarity
 
 # ----------------------------------------------------------------------------
 # PAGE CONFIG
@@ -27,7 +28,6 @@ CUSTOMER_RFM_PATH = DATA_DIR / "customer_rfm.csv"
 
 KMEANS_PATH = MODEL_DIR / "kmeans_model.pkl"
 SCALER_PATH = MODEL_DIR / "scaler.pkl"
-SIMILARITY_PATH = MODEL_DIR / "similarity_matrix.pkl"
 PRODUCT_NAMES_PATH = MODEL_DIR / "product_names.pkl"
 
 CLUSTER_LABELS = {
@@ -94,28 +94,48 @@ def load_scaler():
 
 @st.cache_resource
 def load_similarity_matrix():
-    try:
-        return joblib.load(SIMILARITY_PATH)
-    except Exception as e:
-        st.error(f"Could not load similarity_matrix.pkl: {e}")
-        return None
 
-
-@st.cache_resource
-def load_product_names():
     try:
-        return joblib.load(PRODUCT_NAMES_PATH)
+        df = pd.read_csv(ONLINE_RETAIL_PATH)
+
+        # Clean product names
+        df = df.dropna(subset=['Description'])
+        df['Description'] = df['Description'].str.strip()
+
+        # Customer-Product Matrix
+        customer_product_matrix = df.pivot_table(
+            index='CustomerID',
+            columns='Description',
+            values='Quantity',
+            aggfunc='sum',
+            fill_value=0
+        )
+
+        # Convert to binary matrix
+        customer_product_matrix = customer_product_matrix.apply(
+            lambda col: col.map(lambda x: 1 if x > 0 else 0)
+        )
+
+        # Item Matrix
+        item_matrix = customer_product_matrix.T
+
+        # Cosine Similarity
+        similarity_matrix = cosine_similarity(item_matrix)
+
+        product_names = item_matrix.index.tolist()
+
+        return similarity_matrix, product_names
+
     except Exception as e:
-        st.error(f"Could not load product_names.pkl: {e}")
-        return []
+        st.error(f"Could not create recommendation model: {e}")
+        return None, []
 
 
 retail_df = load_online_retail()
 rfm_df = load_customer_rfm()
 kmeans_model = load_kmeans_model()
 scaler = load_scaler()
-similarity_matrix = load_similarity_matrix()
-product_names = load_product_names()
+similarity_matrix, product_names = load_similarity_matrix()
 
 # ----------------------------------------------------------------------------
 # SIDEBAR NAVIGATION
