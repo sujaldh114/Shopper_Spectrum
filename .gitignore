@@ -1,0 +1,22 @@
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Anaconda temporary files
+anaconda_projects/
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Backup notebooks
+*_backup.ipynb
+
+# VS Code settings
+.vscode/
+
+# Windows files
+Thumbs.db
+
+3. Models/similarity_matrix.pkl
+4. Notebook/
